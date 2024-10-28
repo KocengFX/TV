@@ -1,0 +1,51 @@
+//@version=5
+indicator("Bearish Spinning Top Order Block", overlay=true)
+
+// User Inputs
+period = input.int(20, title="Period for S&D, BOS, and CHoCH")
+
+// Mengambil data OHLC
+openPrice = open
+highPrice = high
+closePrice = close
+lowPrice = low
+
+// Menentukan kondisi bearish
+bearishCandle = closePrice < openPrice
+
+// Menghitung panjang bodi dan sumbu
+bodyLength = math.abs(closePrice - openPrice)
+upperWickLength = highPrice - math.max(openPrice, closePrice)
+lowerWickLength = math.min(openPrice, closePrice) - lowPrice
+
+// Menentukan kondisi untuk candle dengan bodi kecil dan sumbu hampir sama
+equalWickCondition = bearishCandle and 
+                     (upperWickLength > 0 and lowerWickLength > 0) and
+                     (math.abs(upperWickLength - lowerWickLength) <= ((upperWickLength + lowerWickLength) * 0.1)) and 
+                     (bodyLength < (highPrice - lowPrice) * 0.5)
+
+// Fungsi untuk menggambar order block
+drawOrderBlock(float orderBlockHigh, float orderBlockLow, bool touched) =>
+    if not touched
+        var box orderBlockBox = na
+        orderBlockBox := box.new(left=bar_index[0], top=orderBlockHigh, right=bar_index + 20, bottom=orderBlockLow, border_color=#5289ff, bgcolor=#0346ff48, extend=extend.none)
+
+// Menentukan Order Block
+var float orderBlockHigh = na
+var float orderBlockLow = na
+var bool touched = false
+
+if equalWickCondition
+    orderBlockHigh := highPrice
+    orderBlockLow := lowPrice
+    touched := false
+    drawOrderBlock(orderBlockHigh, orderBlockLow, touched)
+
+// Memeriksa apakah harga menyentuh order block
+if closePrice <= orderBlockHigh and closePrice >= orderBlockLow
+    touched := true
+
+// Reset Order Block jika kondisi tidak terpenuhi
+if not equalWickCondition
+    orderBlockHigh := na
+    orderBlockLow := na
